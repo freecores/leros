@@ -8,12 +8,17 @@ EXTENSIONS=class rbf rpt sof pin summary ttf qdf dat wlf done qws
 #
 #	Set USB to true for an FTDI chip based board (dspio, usbmin, lego)
 #
-USB=false
+USB=true
 
 
 # Assembler files
 APP=test
 APP=muvium
+
+# Java application
+JAPP=Blink
+JAPP_PKG=.
+
 # Altera FPGA configuration cable
 #BLASTER_TYPE=ByteBlasterMV
 BLASTER_TYPE=USB-Blaster
@@ -27,8 +32,13 @@ else
 endif
 
 # The VHDL project for Quartus
-QPROJ=dspio
 QPROJ=altde2-70
+QPROJ=dspio
+
+# Some shortcuts
+MUVIUM=LerosMuviumSDK
+MUVIUM_CP=./$(S)./lib/Muvium-Leros.jar$(S)./MUVIUM_CP=./$(S)./lib/jdom.jar$(S)./lib/jaxen.jar$(S).
+TARGET_SRC=java/target/src
 
 all: directories tools rom
 	make lerosusb
@@ -38,35 +48,50 @@ directories:
 	-mkdir rbf
 
 tools:
-	-rm -rf java/classes
-	-rm -rf java/lib
-	-rm -rf java/src/leros/asm/generated
-	mkdir java/classes
-	mkdir java/lib
-	mkdir java/src/leros/asm/generated
+	-rm -rf rbf
+	-rm -rf java/tools/classes
+	-rm -rf java/tools/lib
+	-rm -rf java/tools/src/leros/asm/generated
+	mkdir rbf
+	mkdir java/tools/classes
+	mkdir java/tools/lib
+	mkdir java/tools/src/leros/asm/generated
 	java -classpath lib/antlr-3.3-complete.jar org.antlr.Tool \
-		-fo java/src/leros/asm/generated java/src/grammar/Leros.g
+		-fo java/tools/src/leros/asm/generated \
+		java/tools/src/grammar/Leros.g
 	javac -classpath lib/antlr-3.3-complete.jar \
-		-d java/classes java/src/leros/asm/generated/*.java \
-		java/src/leros/asm/*.java
-	javac -d java/classes -sourcepath java/src java/src/leros/sim/*.java
-	cd java/classes && jar cf ../lib/leros-tools.jar *
+		-d java/tools/classes java/tools/src/leros/asm/generated/*.java \
+		java/tools/src/leros/asm/*.java
+	javac -d java/tools/classes -sourcepath \
+		java/tools/src java/tools/src/leros/sim/*.java
+	cd java/tools/classes && jar cf ../lib/leros-tools.jar *
+
+java_app:
+	-rm -rf java/target/classes
+	mkdir java/target/classes
+	javac -target 1.5 -g -d java/target/classes \
+		-sourcepath  $(TARGET_SRC) $(TARGET_SRC)/$(JAPP).java
+	cd $(MUVIUM); java -cp $(MUVIUM_CP)$(S)../java/target/classes \
+		MuviumMetal $(JAPP) config.xml ../asm/muvium.asm
+
+japp:
+	make java_app
+	make rom -e APP=muvium
+	make lerosusb
+	make config
 
 rom: 
 	-rm -rf vhdl/generated
 	mkdir vhdl/generated
-	java -cp java/lib/leros-tools.jar$(S)lib/antlr-3.3-complete.jar \
+	java -cp java/tools/lib/leros-tools.jar$(S)lib/antlr-3.3-complete.jar \
 		leros.asm.LerosAsm -s asm -d vhdl/generated $(APP).asm
+
 jsim: rom
 	java -cp java/lib/leros-tools.jar -Dlog=false \
 		leros.sim.LerosSim rom.txt
 sim: rom
 	cd modelsim; make
 
-rom_old:
-	-rm -rf vhdl/generated
-	mkdir vhdl/generated
-	java -cp java/lib/leros-tools.jar leros.LerosAsm -s asm -d vhdl/generated $(APP).asm
 
 # configure the FPGA
 config:

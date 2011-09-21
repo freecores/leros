@@ -29,58 +29,14 @@
    policies, either expressed or implied, of the copyright holder.
  */
 
-package leros.sim;
-
-import java.io.IOException;
+package java.lang;
 
 /**
- * Simulation of IO devices connected to Leros. IO mapping is at the moment not
- * the same as in VHDL.
+ * Part of the VERY minimalistic Leros/muvium JDK
  * 
- * @author martin
+ * @author Martin Schoeberl
  * 
  */
-public class LerosIO {
+public class String {
 
-	final static int UART = 0;
-
-	public void write(int addr, int data) {
-		switch (addr) {
-		case UART+1:	// data register
-			System.out.print((char) data);
-			break;
-
-		default:
-			System.out.println("IO address " + addr + " not defined");
-			break;
-		}
-	}
-
-	public int read(int addr) {
-
-		int ret = 0;
-		switch (addr) {
-		case UART:		// status register
-			ret = 1;
-			try {
-				if (System.in.available()!=0) {
-					ret |= 2;
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			break;
-		case UART+1:	// data registers
-			try {
-				ret = System.in.read();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			break;
-		default:
-			System.out.println("IO address " + addr + " not defined");
-			break;
-		}
-		return ret;
-	}
 }
